@@ -11,9 +11,12 @@ from sklearn.pipeline import Pipeline
 import matplotlib.pyplot as plt
 import shap
 from lime import lime_tabular
-
+import itertools
+import os
 
 def load_dataset(file_path):
+    assert file_path.endswith('.csv'), "File must have .csv extension."
+    
     try:
         dataset = pd.read_csv(file_path)
     except FileNotFoundError:
@@ -22,6 +25,12 @@ def load_dataset(file_path):
     return dataset
 
 def data_validation(dataset):
+    assert dataset.shape[1] >= 2, "Dataset should have atleast two columns (one for features and one for labels)"
+    assert dataset.shape[0] >= 1, "Dataset should have atleast one row."
+    
+    unique_labels = dataset.iloc[:, -1].nunique()
+    assert unique_labels >= 2, f"Dataset should contain atleast two unique labels. Detected: {unique_labels}"
+    
     if dataset.isnull().any().any():
         print("Missing values detected. Please provide a dataset with no missing values.")
     else:
@@ -45,11 +54,16 @@ def preprocess_new_data(scaler, new_data):
     return X_new
 
 def feature_elimination(X_train, y_train, n_features_to_select):
+    total_features = X_train.shape[1]
+    assert 1 <= n_features_to_select <= total_features, f"n_features_to_select should be in the range [1, {total_features}]"
+    
     rfe = RFE(estimator=RandomForestClassifier(n_estimators=100, random_state=42), n_features_to_select=n_features_to_select)
     rfe.fit(X_train, y_train)
     return rfe
 
 def train_incremental_model(X_train, y_train, n_estimators=100, n_splits=5):
+    assert n_splits > 1, "n_splits should be greater than 1."
+    
     train_splits = np.array_split(X_train, n_splits)
     target_splits = np.array_split(y_train, n_splits)
     
