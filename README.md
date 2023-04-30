@@ -22,8 +22,33 @@ Key Features:
 - Click the 'Run analysis' button to train the model and display results.
 - Provide the path of the CSV file containing new patient data to predict.
 - Click the 'Predict new patient' button to predict the new patient data.
+
 # CSV File Format
 The CSV file should contain columns of features and a label column with integer labels (0 or 1). There should be no missing values in the data.
+
+Here's an example of a simplified CSV file for a real-world medical dataset. This dataset contains information about patients and whether they have diabetes or not. The dataset has the following columns:
+
+- Age: The age of the patient
+- BMI: The patient's Body Mass Index
+- Glucose: The patient's fasting blood glucose level
+- BloodPressure: The patient's systolic blood pressure
+- Insulin: The patient's insulin level
+- Diabetes: The target variable - whether the patient has diabetes (1) or not (0)
+Example CSV file content:
+```
+Age,BMI,Glucose,BloodPressure,Insulin,Diabetes
+42,23.5,99,75,140,0
+36,26.1,112,85,195,1
+29,28.2,130,95,205,1
+57,35.1,150,100,240,1
+61,32.4,140,85,265,1
+45,24.3,108,70,155,0
+38,29.5,120,80,190,1
+34,27.7,110,90,175,0
+49,25.2,120,72,180,1
+52,33.1,140,92,230,1
+```
+Please note that this is a small example dataset and does not represent the full complexity of real-world medical data. When working with actual data, you may encounter more complex features, a larger number of features, and more instances. Additionally, it is essential to preprocess the data (handle missing values, normalize, etc.) before using it in machine learning models.
 
 # Output
 The output of the code includes:
