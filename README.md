@@ -60,3 +60,5 @@ The code consists of several functions for data validation, preprocessing, featu
 - The IPython widgets provide a user-friendly interface for the pipeline, allowing the user to provide the CSV file paths and select the number of top features and incremental splits.
 
 This Random Forest Classifier code tries to provide an efficient way to preprocess, validate, and classify medical data. The incremental training and feature elimination techniques improve the performance of the model. The SHAP values explain the model predictions, making it more interpretable. The interface is easily customizable and modifiable for different datasets.
+
+.cbrwx
