@@ -24,30 +24,39 @@ def load_dataset(file_path):
         raise
     return dataset
 
-def data_validation(dataset):
-    assert dataset.shape[1] >= 2, "Dataset should have atleast two columns (one for features and one for labels)"
+def data_validation(dataset, has_labels=True):
     assert dataset.shape[0] >= 1, "Dataset should have atleast one row."
-    
-    unique_labels = dataset.iloc[:, -1].nunique()
-    assert unique_labels >= 2, f"Dataset should contain atleast two unique labels. Detected: {unique_labels}"
-    
+
+    if has_labels:
+        assert dataset.shape[1] >= 2, "Dataset should have at least two columns (one for features and one for labels)"
+        unique_labels = dataset.iloc[:, -1].nunique()
+        assert unique_labels >= 2, f"Dataset should contain at least two unique labels. Detected: {unique_labels}"
+
     if dataset.isnull().any().any():
         print("Missing values detected. Please provide a dataset with no missing values.")
     else:
         return dataset
 
-def preprocess_data(dataset):
-    X = dataset.iloc[:, :-1].values
-    y = dataset.iloc[:, -1].values
-    if not np.array_equal(y, y.astype(int)):
+def preprocess_data(dataset, has_labels=True):
+    if has_labels:
+        X = dataset.iloc[:, :-1].values
+        y = dataset.iloc[:, -1].values
+    else:
+        X = dataset.values
+        y = None
+
+    if y is not None and not np.array_equal(y, y.astype(int)):
         print("Non-integer labels detected.")
         raise
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) if y is not None else (X, None, None, None)
 
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    X_test = scaler.transform(X_test) if X_test is not None else None
+
     return X_train, X_test, y_train, y_test, scaler
+
 
 def preprocess_new_data(scaler, new_data):
     X_new = scaler.transform(new_data)
@@ -133,10 +142,10 @@ def grid_search(X_train, y_train):
     grid_search.fit(X_train, y_train)
     return grid_search.best_params_
 
-def run_pipeline(file_path, n_features_to_select, n_splits=5):
+def run_pipeline(file_path, n_features_to_select, n_splits=5, has_labels=True):
     dataset = load_dataset(file_path)
-    dataset = data_validation(dataset)
-    X_train, X_test, y_train, y_test, scaler = preprocess_data(dataset)
+    dataset = data_validation(dataset, has_labels=has_labels)
+    X_train, X_test, y_train, y_test, scaler = preprocess_data(dataset, has_labels=has_labels)
 
     print("Grid search for hyperparameter tuning:")
     best_params = grid_search(X_train, y_train)
@@ -160,11 +169,19 @@ def run_pipeline(file_path, n_features_to_select, n_splits=5):
 
     return classifiers, scaler
 
-def predict_new_patient(new_patient_path, classifiers, scaler):
-    new_data = load_dataset(new_patient_path)
+def predict_new_patient(new_data, classifiers, scaler):
     X_new = preprocess_new_data(scaler, new_data)
-    new_pred = predict_incremental_model(classifiers, X_new)
-    return new_pred
+    ensemble_preds = predict_incremental_model_probs(classifiers, X_new)
+    return ensemble_preds
+
+def predict_incremental_model_probs(classifiers, X_test):
+    predictions = []
+    for clf in classifiers:
+        part_preds = clf.predict_proba(X_test)
+        predictions.append(part_preds)
+
+    ensemble_preds = np.mean(predictions, axis=0)
+    return ensemble_preds
 
 file_path_text = widgets.Text(
     value='',
@@ -202,6 +219,13 @@ new_patient_path_text = widgets.Text(
     disabled=False
 )
 
+has_labels_checkbox = widgets.Checkbox(
+    value=True,
+    description='Has labels',
+    disabled=False,
+    indent=False
+)
+
 run_button = widgets.Button(
     description='Run analysis',
     disabled=False,
@@ -216,23 +240,28 @@ predict_button = widgets.Button(
     tooltip='Click to predict new patient'
 )
 
+run_button.model_data = None
+predict_button.model_data = None
+
 def on_run_button_click(b):
     file_path = file_path_text.value
     n_features_to_select = n_features_widget.value
     n_splits = n_splits_widget.value
+    has_labels = has_labels_checkbox.value
 
-    classifiers, scaler = run_pipeline(file_path, n_features_to_select, n_splits)
+    classifiers, scaler = run_pipeline(file_path, n_features_to_select, n_splits, has_labels=has_labels)
     b.model_data = {'classifiers': classifiers, 'scaler': scaler}
-    predict_button.disabled = False
+    predict_button.disabled = False if classifiers is not None else True
 
 def on_predict_button_click(b):
     new_patient_path = new_patient_path_text.value
+    new_data = load_dataset(new_patient_path)
     classifiers = run_button.model_data['classifiers']
     scaler = run_button.model_data['scaler']
-    predictions = predict_new_patient(new_patient_path, classifiers, scaler)
-    print("Prediction for new patient(s):", predictions)
+    predictions = predict_new_patient(new_data, classifiers, scaler)
+    print("Prediction probabilities for new patient(s):\n", predictions)
 
 run_button.on_click(on_run_button_click)
 predict_button.on_click(on_predict_button_click)
 
-widgets.VBox([file_path_text, n_features_widget, n_splits_widget, run_button, new_patient_path_text, predict_button])
+widgets.VBox([file_path_text, n_features_widget, n_splits_widget, has_labels_checkbox, run_button, new_patient_path_text, predict_button])
