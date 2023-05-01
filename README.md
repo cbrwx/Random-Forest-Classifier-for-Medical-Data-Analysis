@@ -23,6 +23,8 @@ Key Features:
 - Provide the path of the CSV file containing new patient data to predict.
 - Click the 'Predict new patient' button to predict the new patient data.
 
+To use the predict_new_patient function, you need to provide it with the new patient's data as a Pandas DataFrame, the classifiers and scaler objects obtained from running the pipeline, and it will return the predicted illness probabilities.
+
 # CSV File Format
 The CSV file should contain columns of features and a label column with integer labels (0 or 1). There should be no missing values in the data.
 
